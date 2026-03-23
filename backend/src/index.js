@@ -21,6 +21,7 @@ import { computeIngredientPlan, getIngredientMeta, getRecipes, getStockByOutlet 
 import { fetchMlDailyForecast } from './mlClient.js'
 import { buildInsights, getActualDishTotals } from './insights.js'
 import { getLocalLlmConfig, ollamaChat, ollamaStatus } from './llm.js'
+import { checkGroqStatus, askGroq } from './llm-groq.js'
 
 const app = express()
 app.use(cors())
@@ -186,22 +187,45 @@ app.get('/api/health', async (_req, res) => {
 })
 
 app.get('/api/llm/status', async (_req, res) => {
-  const cfg = getLocalLlmConfig()
-  if (!cfg.enabled) return res.json({ ok: false, enabled: false, provider: cfg.provider })
-  if (cfg.provider !== 'ollama') return res.json({ ok: false, enabled: cfg.enabled, provider: cfg.provider })
+  const provider = process.env.LLM_PROVIDER?.toLowerCase() || 'ollama'
+  const enabled = String(process.env.LLM_ENABLED ?? '1') !== '0'
 
-  try {
-    const tags = await ollamaStatus({ baseUrl: cfg.baseUrl })
-    res.json({ ok: true, enabled: true, provider: 'ollama', base_url: cfg.baseUrl, model: cfg.model, tags })
-  } catch (e) {
-    res.status(503).json({ ok: false, enabled: true, provider: 'ollama', base_url: cfg.baseUrl, model: cfg.model, error: e?.message ?? String(e) })
+  if (!enabled) {
+    return res.json({ ok: false, enabled: false, provider })
   }
+
+  // Groq provider
+  if (provider === 'groq') {
+    const status = await checkGroqStatus()
+    if (status.status === 'ok') {
+      return res.json({ ok: true, enabled: true, provider: 'groq', message: status.message })
+    }
+    return res.status(503).json({ ok: false, enabled: true, provider: 'groq', error: status.message })
+  }
+
+  // Ollama provider (default)
+  if (provider === 'ollama') {
+    const cfg = getLocalLlmConfig()
+    try {
+      const tags = await ollamaStatus({ baseUrl: cfg.baseUrl })
+      res.json({ ok: true, enabled: true, provider: 'ollama', base_url: cfg.baseUrl, model: cfg.model, tags })
+    } catch (e) {
+      res.status(503).json({ ok: false, enabled: true, provider: 'ollama', base_url: cfg.baseUrl, model: cfg.model, error: e?.message ?? String(e) })
+    }
+    return
+  }
+
+  // Unknown provider
+  res.json({ ok: false, enabled, provider, error: `Unknown provider: ${provider}` })
 })
 
 app.post('/api/llm/ask', async (req, res) => {
-  const cfg = getLocalLlmConfig()
-  if (!cfg.enabled) return res.status(503).json({ ok: false, error: 'LLM is disabled' })
-  if (cfg.provider !== 'ollama') return res.status(503).json({ ok: false, error: 'Unsupported LLM provider' })
+  const provider = process.env.LLM_PROVIDER?.toLowerCase() || 'ollama'
+  const enabled = String(process.env.LLM_ENABLED ?? '1') !== '0'
+
+  if (!enabled) {
+    return res.status(503).json({ ok: false, error: 'LLM is disabled' })
+  }
 
   const payload = AskLlmSchema.parse(req.body ?? {})
   const startDate = parseStartDate(payload.start ?? null)
@@ -283,28 +307,44 @@ app.post('/api/llm/ask', async (req, res) => {
     rule_based_insights: insights
   }
 
-  const system = [
-    'You are a supply-chain and kitchen ops analyst for an F&B forecasting dashboard.',
-    'Use only the provided data snapshot. If data is missing, say what is missing.',
-    'Answer with short bullet points and include concrete numbers when possible.',
-    'Never claim you executed queries or accessed systems.'
-  ].join('\n')
-
   try {
-    const answer = await ollamaChat({
-      baseUrl: cfg.baseUrl,
-      model: cfg.model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: `Question: ${payload.question}\n\nData snapshot:\n${JSON.stringify(snapshot)}` }
-      ]
-    })
-    res.json({ ok: true, provider: 'ollama', model: cfg.model, answer, snapshot })
+    let answer
+    let model
+
+    // Groq provider
+    if (provider === 'groq') {
+      answer = await askGroq(payload.question, snapshot)
+      model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+    }
+    // Ollama provider (default)
+    else if (provider === 'ollama') {
+      const cfg = getLocalLlmConfig()
+      model = cfg.model
+      const system = [
+        'You are a supply-chain and kitchen ops analyst for an F&B forecasting dashboard.',
+        'Use only the provided data snapshot. If data is missing, say what is missing.',
+        'Answer with short bullet points and include concrete numbers when possible.',
+        'Never claim you executed queries or accessed systems.'
+      ].join('\n')
+
+      answer = await ollamaChat({
+        baseUrl: cfg.baseUrl,
+        model: cfg.model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: `Question: ${payload.question}\n\nData snapshot:\n${JSON.stringify(snapshot)}` }
+        ]
+      })
+    }
+    else {
+      return res.status(503).json({ ok: false, error: `Unsupported provider: ${provider}` })
+    }
+
+    res.json({ ok: true, provider, model, answer, snapshot })
   } catch (e) {
     res.status(503).json({
       ok: false,
-      provider: 'ollama',
-      model: cfg.model,
+      provider,
       error: e?.message ?? String(e),
       snapshot,
       fallback: { insights }
