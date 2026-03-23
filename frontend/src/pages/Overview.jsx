@@ -153,7 +153,11 @@ export default function Overview() {
         <div style={{ width: '100%', height: 280 }}>
           <ResponsiveContainer>
             <PieChart>
-              <Tooltip contentStyle={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.12)' }} />
+              <Tooltip
+                contentStyle={{ background: '#0b1220', border: '1px solid rgba(255,255,255,0.12)', color: '#e6eefc' }}
+                itemStyle={{ color: '#e6eefc' }}
+                labelStyle={{ color: '#e6eefc' }}
+              />
               <Pie data={charts?.ingredient_usage_breakdown ?? []} dataKey="quantity" nameKey="ingredient" innerRadius={55} outerRadius={95}>
                 {(charts?.ingredient_usage_breakdown ?? []).map((_, i) => (
                   <Cell key={i} fill={pieColors[i % pieColors.length]} />
