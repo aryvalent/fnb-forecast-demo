@@ -1,4 +1,4 @@
-# PROD COMPOSE (ports exposed, existing Nginx on host routes to them)
+# PROD COMPOSE (Approach: Static files on VPS, Docker for DB + Backend only)
 services:
   db:
     image: postgres:16
@@ -34,15 +34,9 @@ services:
       db:
         condition: service_healthy
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "${FRONTEND_PORT:-3002}:80"
-    depends_on:
-      - backend
+  # Frontend: Build static files, serve via VPS Nginx
+  # Run: cd frontend && npm run build
+  # Then: scp -r frontend/dist/* user@vps:/var/www/fnb-forecast/
 
   # Optional: ML service (uncomment if needed for >90% accuracy)
   # ml-service:
