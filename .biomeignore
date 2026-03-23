@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.git
+frontend
+ml-service
+scripts
+*.min.js
+*.min.css

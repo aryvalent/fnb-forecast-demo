@@ -1,0 +1,53 @@
+# PROD COMPOSE (Approach: Static files on VPS, Docker for DB + Backend only)
+services:
+  db:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: fnb_forecasting
+    volumes:
+      - fnb_pgdata_prod:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/fnb_forecasting
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://your-ip-or-domain}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Frontend: Build static files, serve via VPS Nginx
+  # Run: cd frontend && npm run build
+  # Then: scp -r frontend/dist/* user@vps:/var/www/fnb-forecast/
+
+  # Optional: ML service (uncomment if needed for >90% accuracy)
+  # ml-service:
+  #   build:
+  #     context: ./ml-service
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     PYTHONUNBUFFERED: 1
+
+volumes:
+  fnb_pgdata_prod:
