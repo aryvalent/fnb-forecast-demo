@@ -1,31 +1,35 @@
 export async function getRecipes(pool) {
-  const { rows } = await pool.query('select dish, ingredient, qty_per_dish::float as qty_per_dish from recipes')
-  const map = new Map()
+  const { rows } = await pool.query(
+    'select dish, ingredient, qty_per_dish::float as qty_per_dish from recipes'
+  );
+  const map = new Map();
   for (const r of rows) {
-    const arr = map.get(r.dish) ?? []
-    arr.push({ ingredient: r.ingredient, qty_per_dish: Number(r.qty_per_dish) })
-    map.set(r.dish, arr)
+    const arr = map.get(r.dish) ?? [];
+    arr.push({ ingredient: r.ingredient, qty_per_dish: Number(r.qty_per_dish) });
+    map.set(r.dish, arr);
   }
-  return map
+  return map;
 }
 
 export async function getIngredientMeta(pool) {
-  const { rows } = await pool.query('select ingredient, shelf_life_days, unit from ingredients')
-  const map = new Map()
+  const { rows } = await pool.query('select ingredient, shelf_life_days, unit from ingredients');
+  const map = new Map();
   for (const r of rows) {
-    map.set(r.ingredient, { shelf_life_days: Number(r.shelf_life_days), unit: r.unit })
+    map.set(r.ingredient, { shelf_life_days: Number(r.shelf_life_days), unit: r.unit });
   }
-  return map
+  return map;
 }
 
 export async function getStockByOutlet(pool) {
-  const { rows } = await pool.query('select outlet, ingredient, current_stock::float as current_stock from stock')
-  const map = new Map()
+  const { rows } = await pool.query(
+    'select outlet, ingredient, current_stock::float as current_stock from stock'
+  );
+  const map = new Map();
   for (const r of rows) {
-    const key = `${r.outlet}|||${r.ingredient}`
-    map.set(key, Number(r.current_stock))
+    const key = `${r.outlet}|||${r.ingredient}`;
+    map.set(key, Number(r.current_stock));
   }
-  return map
+  return map;
 }
 
 // Ingredient plan = dish forecast × recipe ratios, aggregated per outlet.
@@ -36,42 +40,47 @@ export function computeIngredientPlan({
   ingredientMeta,
   stockByOutlet,
   safetyStockPct,
-  horizonDays
+  horizonDays,
 }) {
-  const acc = new Map()
+  const acc = new Map();
 
   for (const f of dishForecastTotals) {
-    const recipes = recipeByDish.get(f.dish) ?? []
+    const recipes = recipeByDish.get(f.dish) ?? [];
     for (const r of recipes) {
-      const key = `${f.outlet}|||${r.ingredient}`
-      const prev = acc.get(key) ?? { outlet: f.outlet, ingredient: r.ingredient, required_qty: 0 }
-      prev.required_qty += Number(f.predicted_quantity) * Number(r.qty_per_dish)
-      acc.set(key, prev)
+      const key = `${f.outlet}|||${r.ingredient}`;
+      const prev = acc.get(key) ?? { outlet: f.outlet, ingredient: r.ingredient, required_qty: 0 };
+      prev.required_qty += Number(f.predicted_quantity) * Number(r.qty_per_dish);
+      acc.set(key, prev);
     }
   }
 
-  const out = []
+  const out = [];
   for (const v of acc.values()) {
-    const meta = ingredientMeta.get(v.ingredient) ?? { shelf_life_days: null, unit: null }
-    const stockKey = `${v.outlet}|||${v.ingredient}`
-    const stock = stockByOutlet.get(stockKey) ?? 0
-    const bufferedRequired = v.required_qty * (1 + safetyStockPct)
+    const meta = ingredientMeta.get(v.ingredient) ?? { shelf_life_days: null, unit: null };
+    const stockKey = `${v.outlet}|||${v.ingredient}`;
+    const stock = stockByOutlet.get(stockKey) ?? 0;
+    const bufferedRequired = v.required_qty * (1 + safetyStockPct);
 
-    const safeHorizonDays = Math.max(1, Number(horizonDays ?? 7))
-    const dailyUsage = bufferedRequired / safeHorizonDays
-    const daysOfCoverage = dailyUsage > 0 ? stock / dailyUsage : null
+    const safeHorizonDays = Math.max(1, Number(horizonDays ?? 7));
+    const dailyUsage = bufferedRequired / safeHorizonDays;
+    const daysOfCoverage = dailyUsage > 0 ? stock / dailyUsage : null;
 
     const maxStockByShelfLife =
-      meta.shelf_life_days != null && Number.isFinite(meta.shelf_life_days) ? dailyUsage * Number(meta.shelf_life_days) : null
-    const targetStock = maxStockByShelfLife == null ? bufferedRequired : Math.min(bufferedRequired, maxStockByShelfLife)
-    const recommended_order_raw = Math.max(0, bufferedRequired - stock)
-    const recommended_order = Math.max(0, targetStock - stock)
+      meta.shelf_life_days != null && Number.isFinite(meta.shelf_life_days)
+        ? dailyUsage * Number(meta.shelf_life_days)
+        : null;
+    const targetStock =
+      maxStockByShelfLife == null
+        ? bufferedRequired
+        : Math.min(bufferedRequired, maxStockByShelfLife);
+    const recommended_order_raw = Math.max(0, bufferedRequired - stock);
+    const recommended_order = Math.max(0, targetStock - stock);
 
-    let risk = 'low'
+    let risk = 'low';
     if (recommended_order_raw > 0) {
-      risk = 'high'
+      risk = 'high';
     } else if (daysOfCoverage != null && daysOfCoverage < 3) {
-      risk = 'medium'
+      risk = 'medium';
     }
 
     out.push({
@@ -88,10 +97,10 @@ export function computeIngredientPlan({
       recommended_order_raw: Number(recommended_order_raw.toFixed(2)),
       recommended_order: Number(recommended_order.toFixed(2)),
       stockout_risk: risk,
-      shelf_life_capped: maxStockByShelfLife != null && bufferedRequired > maxStockByShelfLife
-    })
+      shelf_life_capped: maxStockByShelfLife != null && bufferedRequired > maxStockByShelfLife,
+    });
   }
 
-  out.sort((a, b) => b.recommended_order - a.recommended_order)
-  return out
+  out.sort((a, b) => b.recommended_order - a.recommended_order);
+  return out;
 }

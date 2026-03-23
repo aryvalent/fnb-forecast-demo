@@ -68,6 +68,21 @@ npm run dev
 
 Backend: http://localhost:3001
 
+### Code Quality (Biome)
+
+Backend uses Biome for fast linting + formatting:
+
+```bash
+# Check all lint rules
+npx @biomejs/biome@1.9.4 check backend/src/
+
+# Auto-fix formatting
+npx @biomejs/biome@1.9.4 format --write backend/src/
+
+# Check + fix in one command
+npx @biomejs/biome@1.9.4 check backend/src/ --write
+```
+
 3) Frontend setup
 
 ```powershell

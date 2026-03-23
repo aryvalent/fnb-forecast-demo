@@ -1,4 +1,4 @@
-export const outlets = ['Downtown', 'Marina', 'Uptown', 'Airport']
+export const outlets = ['Downtown', 'Marina', 'Uptown', 'Airport'];
 
 export const ingredients = [
   { ingredient: 'chicken_breast', shelf_life_days: 3, unit: 'kg' },
@@ -22,8 +22,8 @@ export const ingredients = [
   { ingredient: 'soy_sauce', shelf_life_days: 365, unit: 'l' },
   { ingredient: 'lime', shelf_life_days: 14, unit: 'kg' },
   { ingredient: 'basil', shelf_life_days: 7, unit: 'kg' },
-  { ingredient: 'mushroom', shelf_life_days: 7, unit: 'kg' }
-]
+  { ingredient: 'mushroom', shelf_life_days: 7, unit: 'kg' },
+];
 
 export const recipes = [
   { dish: 'Chicken Rice Bowl', ingredient: 'chicken_breast', qty_per_dish: 0.18 },
@@ -69,12 +69,11 @@ export const recipes = [
   { dish: 'Beef Rice Bowl', ingredient: 'onion', qty_per_dish: 0.02 },
   { dish: 'Mushroom Pizza', ingredient: 'pizza_dough', qty_per_dish: 0.18 },
   { dish: 'Mushroom Pizza', ingredient: 'cheese', qty_per_dish: 0.1 },
-  { dish: 'Mushroom Pizza', ingredient: 'mushroom', qty_per_dish: 0.12 }
-]
+  { dish: 'Mushroom Pizza', ingredient: 'mushroom', qty_per_dish: 0.12 },
+];
 
 export function seededStockValue(ingredient, outlet) {
-  const raw = [...`${ingredient}:${outlet}`].reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-  const base = (raw % 17) + 8
-  return base
+  const raw = [...`${ingredient}:${outlet}`].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const base = (raw % 17) + 8;
+  return base;
 }
-

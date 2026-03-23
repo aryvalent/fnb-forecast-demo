@@ -1,0 +1,47 @@
+name: CI
+
+on:
+    push:
+        branches: [dev, main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    lint-and-test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "npm"
+
+            - name: Install backend dependencies
+              run: |
+                  cd backend
+                  npm ci
+
+            - name: Install frontend dependencies
+              run: |
+                  cd frontend
+                  npm ci
+
+            - name: Run Biome check (backend only)
+              run: npx @biomejs/biome check backend/
+
+            - name: Run Biome format check (backend)
+              run: npx @biomejs/biome format --write backend/
+
+            - name: Run ESLint (frontend)
+              run: |
+                  cd frontend
+                  npm run lint
+
+            - name: Build frontend
+              run: |
+                  cd frontend
+                  npm run build

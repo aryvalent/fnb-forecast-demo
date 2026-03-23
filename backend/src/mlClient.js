@@ -1,12 +1,12 @@
-import { formatISO, subDays } from 'date-fns'
+import { formatISO, subDays } from 'date-fns';
 
 function toIsoDate(d) {
-  return formatISO(d, { representation: 'date' })
+  return formatISO(d, { representation: 'date' });
 }
 
 export async function fetchMlDailyForecast(pool, { startDate, days, mlServiceUrl }) {
-  const historyStart = subDays(startDate, 90)
-  const historyEnd = subDays(startDate, 1)
+  const historyStart = subDays(startDate, 90);
+  const historyEnd = subDays(startDate, 1);
 
   const { rows } = await pool.query(
     `
@@ -17,28 +17,27 @@ export async function fetchMlDailyForecast(pool, { startDate, days, mlServiceUrl
     order by sale_date asc
     `,
     [toIsoDate(historyStart), toIsoDate(historyEnd)]
-  )
+  );
 
   const history = rows.map((r) => ({
     date: toIsoDate(r.date),
     outlet: r.outlet,
     dish: r.dish,
-    quantity: Number(r.quantity)
-  }))
+    quantity: Number(r.quantity),
+  }));
 
-  const url = `${mlServiceUrl.replace(/\/+$/, '')}/predict`
+  const url = `${mlServiceUrl.replace(/\/+$/, '')}/predict`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ history, start_date: toIsoDate(startDate), horizon_days: days })
-  })
+    body: JSON.stringify({ history, start_date: toIsoDate(startDate), horizon_days: days }),
+  });
 
   if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || `ML service error: ${res.status}`)
+    const text = await res.text();
+    throw new Error(text || `ML service error: ${res.status}`);
   }
 
-  const json = await res.json()
-  return json.rows ?? []
+  const json = await res.json();
+  return json.rows ?? [];
 }
-
