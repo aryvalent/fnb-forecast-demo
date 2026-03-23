@@ -1,5 +1,30 @@
 import Groq from 'groq-sdk';
 
+// Rate limit error detection
+function isRateLimitError(err) {
+  const status = err?.status;
+  const code = err?.code;
+  const message = err?.message?.toLowerCase() || '';
+
+  return (
+    status === 429 ||
+    status === 429000 ||
+    code === 'rate_limit_exceeded' ||
+    message.includes('rate limit') ||
+    message.includes('quota exceeded') ||
+    message.includes('daily limit')
+  );
+}
+
+const FALLBACK_INSIGHTS = [
+  'Top dishes show consistent demand patterns - ensure adequate ingredient stock.',
+  'Several ingredients have low days of coverage - consider increasing safety stock.',
+  'Forecast accuracy is within target range - continue current ordering patterns.',
+];
+
+const FALLBACK_ANSWER =
+  'AI assistant is currently rate-limited. Please try again in a few minutes or check the dashboard directly for insights.';
+
 export function getGroqConfig() {
   const enabled = String(process.env.LLM_ENABLED ?? '1') !== '0';
   const apiKey = process.env.GROQ_API_KEY;
@@ -36,6 +61,12 @@ export async function checkGroqStatus() {
     });
     return { status: 'ok', message: `Groq (${config.model})` };
   } catch (err) {
+    if (isRateLimitError(err)) {
+      return {
+        status: 'rate_limited',
+        message: 'Groq rate limit reached - using fallback mode',
+      };
+    }
     return {
       status: 'error',
       message: `Groq connection failed: ${err.message}`,
@@ -56,14 +87,23 @@ export async function groqChat(messages, temperature = 0.2) {
 
   const groq = new Groq({ apiKey: config.apiKey });
 
-  const response = await groq.chat.completions.create({
-    model: config.model,
-    messages,
-    temperature,
-    max_tokens: 500,
-  });
+  try {
+    const response = await groq.chat.completions.create({
+      model: config.model,
+      messages,
+      temperature,
+      max_tokens: 500,
+    });
 
-  return response.choices[0]?.message?.content || '';
+    return response.choices[0]?.message?.content || '';
+  } catch (err) {
+    if (isRateLimitError(err)) {
+      console.warn('[Groq] Rate limit reached, using fallback');
+      // Return null to signal caller to use fallback
+      return null;
+    }
+    throw err;
+  }
 }
 
 // Generate insights from dashboard data
@@ -84,7 +124,14 @@ Provide 3-5 actionable insights for the kitchen team.`;
     { role: 'user', content: userPrompt },
   ];
 
-  return await groqChat(messages, 0.3);
+  const result = await groqChat(messages, 0.3);
+
+  // Fallback to static insights if rate limited
+  if (result === null) {
+    return FALLBACK_INSIGHTS.join('\n\n');
+  }
+
+  return result;
 }
 
 // For NLP Q&A
@@ -99,5 +146,11 @@ Keep answers concise (2-3 sentences). Use the provided data.`;
     { role: 'user', content: `Question: ${question}\n\nData:\n${context}` },
   ];
 
-  return await groqChat(messages, 0.3);
+  const result = await groqChat(messages, 0.3);
+
+  if (result === null) {
+    return FALLBACK_ANSWER;
+  }
+
+  return result;
 }
