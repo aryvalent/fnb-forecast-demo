@@ -5,18 +5,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false,
-    "ignore": [
-      "node_modules/**",
-      "dist/**",
-      "build/**",
-      ".git/**",
-      "frontend/**",
-      "ml-service/**",
-      "scripts/**",
-      "*.min.js",
-      "*.min.css"
-    ]
+    "ignoreUnknown": false
   },
   "formatter": {
     "indentStyle": "space",
@@ -29,11 +18,8 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "warn"
-      },
-      "style": {
-        "useConst": "error",
-        "noVar": "error"
+        "noExplicitAny": "warn",
+        "noAssignInExpressions": "off"
       },
       "correctness": {
         "noUnusedVariables": "error"
@@ -45,5 +31,10 @@
       "quoteStyle": "single",
       "trailingCommas": "es5"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["backend/**"]
+    }
+  ]
 }

@@ -7,8 +7,7 @@ import { parse } from 'csv-parse/sync';
 import express from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { createPool } from './db.js';
-import { withClient } from './db.js';
+import { createPool, withClient } from './db.js';
 import {
   ingredients as demoIngredients,
   outlets as demoOutlets,
@@ -29,8 +28,8 @@ import {
 } from './ingredientPlanning.js';
 import { initDb } from './initDb.js';
 import { buildInsights, getActualDishTotals } from './insights.js';
-import { askGroq, checkGroqStatus } from './llm-groq.js';
 import { getLocalLlmConfig, ollamaChat, ollamaStatus } from './llm.js';
+import { askGroq, checkGroqStatus } from './llm-groq.js';
 import { fetchMlDailyForecast } from './mlClient.js';
 
 const app = express();
