@@ -53,11 +53,11 @@ Repo folders:
 
 ## Quickstart (Recommended: Local PostgreSQL)
 
-1) Create database + set connection string
+1. Create database + set connection string
 
 Make sure you have a local database named `fnb_forecasting`, and update `backend/.env` with your local credentials.
 
-2) Backend setup
+2. Backend setup
 
 ```powershell
 cd backend
@@ -74,16 +74,16 @@ Backend uses Biome for fast linting + formatting:
 
 ```bash
 # Check all lint rules
-npx @biomejs/biome@1.9.4 check backend/src/
+npx @biomejs/biome check backend/src/
 
 # Auto-fix formatting
-npx @biomejs/biome@1.9.4 format --write backend/src/
+npx @biomejs/biome format --write backend/src/
 
 # Check + fix in one command
-npx @biomejs/biome@1.9.4 check backend/src/ --write
+npx @biomejs/biome check backend/src/ --write
 ```
 
-3) Frontend setup
+3. Frontend setup
 
 ```powershell
 cd frontend
@@ -114,51 +114,51 @@ docker compose up -d
 
 This demo can use a local LLM (no cloud) to answer questions using a safe, read-only snapshot of dashboard data.
 
-1) Install Ollama: https://ollama.com
+1. Install Ollama: https://ollama.com
 
-2) Pull a model:
+2. Pull a model:
 
 ```bash
 ollama pull llama3.1
 ```
 
-3) Configure backend env (defaults work):
+3. Configure backend env (defaults work):
 
 - `OLLAMA_URL=http://localhost:11434`
 - `OLLAMA_MODEL=llama3.1`
 
-4) Start backend and open the UI:
+4. Start backend and open the UI:
 
 - In the dashboard nav, go to **Ask AI**
 
 ## Step-by-Step Client Demo Script (2–3 minutes)
 
-1) **Show business KPIs (one sentence each)**
-   - Accuracy: “How close predictions are vs actual demand”
-   - Waste reduction: “Estimated improvement vs manual planning”
-   - Stockout reduction: “Fewer ingredient stockouts with better ordering”
+1. **Show business KPIs (one sentence each)**
+    - Accuracy: “How close predictions are vs actual demand”
+    - Waste reduction: “Estimated improvement vs manual planning”
+    - Stockout reduction: “Fewer ingredient stockouts with better ordering”
 
-2) **Tell the visual story**
-   - Forecast vs Actual chart: show the model tracks demand better than naive
-   - Demand by Outlet: show where prep needs to be focused
-   - Ingredient usage breakdown: show what purchasing will be driven by
+2. **Tell the visual story**
+    - Forecast vs Actual chart: show the model tracks demand better than naive
+    - Demand by Outlet: show where prep needs to be focused
+    - Ingredient usage breakdown: show what purchasing will be driven by
 
-3) **Highlight top demand items**
-   - Top 5 Dishes card: “These drive the week’s prep plan”
+3. **Highlight top demand items**
+    - Top 5 Dishes card: “These drive the week’s prep plan”
 
-4) **Show operational action**
-   - At-Risk Ingredients table: risk colors + days of coverage
+4. **Show operational action**
+    - At-Risk Ingredients table: risk colors + days of coverage
 
-5) **Manual override**
-   - Go to Manual Override → adjust stock for a high-risk ingredient → Save
-   - Return to Overview / Ingredient Planning to show updated recommendations
+5. **Manual override**
+    - Go to Manual Override → adjust stock for a high-risk ingredient → Save
+    - Return to Overview / Ingredient Planning to show updated recommendations
 
-6) **Scenario simulation**
-   - Click “Simulate Weekend Surge (+20%)”
-   - Say: “We can stress-test the plan instantly”
+6. **Scenario simulation**
+    - Click “Simulate Weekend Surge (+20%)”
+    - Say: “We can stress-test the plan instantly”
 
-7) **AI insights**
-   - Read 2–3 insight bullets: “This is what a manager would act on today”
+7. **AI insights**
+    - Read 2–3 insight bullets: “This is what a manager would act on today”
 
 ## API Endpoints (Useful for Live Demos)
 
@@ -234,11 +234,11 @@ For each outlet + dish:
 
 Fallbacks (when data is sparse):
 
-1) Series day-of-week average
-2) Series overall average
-3) Dish-level average
-4) Outlet-level average
-5) Global average
+1. Series day-of-week average
+2. Series overall average
+3. Dish-level average
+4. Outlet-level average
+5. Global average
 
 ## Ingredient Planning Logic
 
@@ -254,7 +254,7 @@ Shelf-life cap (simple demo rule):
 
 ## Optional: Python ML Service (Advanced Mode)
 
-1) Start the ML service
+1. Start the ML service
 
 ```powershell
 cd ml-service
@@ -264,13 +264,13 @@ pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-2) Point the backend to it
+2. Point the backend to it
 
 Set in `backend/.env`:
 
 `ML_SERVICE_URL=http://localhost:8000`
 
-3) Call ML mode forecasts
+3. Call ML mode forecasts
 
 ```bash
 curl "http://localhost:3001/api/forecast/dish?start=2026-03-20&days=7&mode=ml"
